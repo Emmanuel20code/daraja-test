@@ -114,6 +114,34 @@ await pool.query(`
     status TEXT DEFAULT 'active'
   )
 `);
+  await pool.query(`
+ALTER TABLE sessions
+ADD COLUMN IF NOT EXISTS device_id INTEGER
+`);
+
+await pool.query(`
+ALTER TABLE sessions
+ADD COLUMN IF NOT EXISTS ip_address TEXT
+`);
+
+await pool.query(`
+ALTER TABLE sessions
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+`);
+  await pool.query(`
+ALTER TABLE customers
+ADD COLUMN IF NOT EXISTS full_name TEXT
+`);
+
+await pool.query(`
+ALTER TABLE customers
+ADD COLUMN IF NOT EXISTS email TEXT
+`);
+
+await pool.query(`
+ALTER TABLE customers
+ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'
+`);
 
   console.log("Database tables ready.");
 }
