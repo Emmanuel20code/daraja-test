@@ -49,6 +49,19 @@ await pool.query(`
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS devices (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+    mac_address TEXT NOT NULL UNIQUE,
+    device_name TEXT,
+    ip_address TEXT,
+    router_id INTEGER REFERENCES routers(id),
+    status TEXT DEFAULT 'active',
+    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
 await pool.query(`
   CREATE TABLE IF NOT EXISTS payments (
@@ -59,6 +72,17 @@ await pool.query(`
     package_id INTEGER,
     status TEXT DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER,
+    router_id INTEGER,
+    package_id INTEGER,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expiry_time TIMESTAMP,
+    status TEXT DEFAULT 'active'
   )
 `);
 
