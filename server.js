@@ -62,18 +62,47 @@ await pool.query(`
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `);
-
 await pool.query(`
   CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     phone TEXT NOT NULL,
     amount INTEGER NOT NULL,
+    package_id INTEGER REFERENCES packages(id),
+    merchant_request_id TEXT,
+    checkout_request_id TEXT UNIQUE,
     mpesa_receipt TEXT,
-    package_id INTEGER,
     status TEXT DEFAULT 'pending',
+    result_code INTEGER,
+    result_description TEXT,
+    paid_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `);
+  await pool.query(`
+  ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS merchant_request_id TEXT
+`);
+
+await pool.query(`
+  ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS checkout_request_id TEXT UNIQUE
+`);
+
+await pool.query(`
+  ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS result_code INTEGER
+`);
+
+await pool.query(`
+  ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS result_description TEXT
+`);
+
+await pool.query(`
+  ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP
+`);
+
   await pool.query(`
   CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
