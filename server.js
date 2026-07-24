@@ -7,6 +7,16 @@ const moment = require("moment");
 
 
 const app = express();
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+pool.connect()
+  .then(() => console.log("Database connected successfully."))
+  .catch((err) => console.error("Database connection failed:", err));
 
 app.use(express.json());
 app.use(express.static("public"));
