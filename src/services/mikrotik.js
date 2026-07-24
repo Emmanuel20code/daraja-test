@@ -1,18 +1,28 @@
 const logger = require("../utils/logger");
 
-let RouterOSAPI;
+// node-routeros is optional - gracefully disabled if not installed
+let RouterOSAPI = null;
 try {
   RouterOSAPI = require("node-routeros").RouterOSAPI;
+  logger.info("node-routeros loaded - MikroTik direct API integration enabled");
 } catch (e) {
-  logger.warn("node-routeros not available - MikroTik integration disabled");
+  logger.warn("node-routeros not available - MikroTik direct API disabled. Heartbeat-based session management still works.");
+}
+
+/**
+ * Check if RouterOS direct API is available.
+ */
+function isAvailable() {
+  return RouterOSAPI !== null;
 }
 
 /**
  * Get a connected RouterOS API client.
- * Automatically detects API port (8728 plain, 8729 SSL).
  */
 async function getClient(router) {
-  if (!RouterOSAPI) throw new Error("node-routeros not installed");
+  if (!RouterOSAPI) {
+    throw new Error("node-routeros not installed - direct router API unavailable");
+  }
   const conn = new RouterOSAPI({
     host: router.ip_address,
     user: router.api_username || "admin",
@@ -37,7 +47,6 @@ async function addHotspotUser(router, { username, password = "", profile = "defa
     ];
     if (timeLimit) params.push(`=limit-uptime=${timeLimit}`);
     if (macAddress) params.push(`=mac-address=${macAddress}`);
-
     await conn.write("/ip/hotspot/user/add", params);
     logger.info("MikroTik: hotspot user added", { router: router.name, username });
   } finally {
@@ -118,21 +127,23 @@ async function ensureBandwidthProfile(router, { name, downloadSpeed, uploadSpeed
 
 /**
  * Get router system info.
+ * NOTE: bracket notation used for hyphenated keys ("board-name") to avoid syntax errors.
  */
 async function getSystemInfo(router) {
   const conn = await getClient(router);
   try {
-    const [identity, resource, version] = await Promise.all([
+    const [identity, resource, routerboard] = await Promise.all([
       conn.write("/system/identity/print"),
       conn.write("/system/resource/print"),
       conn.write("/system/routerboard/print").catch(() => [])
     ]);
     const res = resource[0] || {};
+    const rb = routerboard[0] || {};
     return {
-      name: identity[0]?.name || router.name,
-      version: res["version"],
-      model: version[0]?."board-name" || res.board,
-      uptime: res.uptime,
+      name: (identity[0] && identity[0].name) || router.name,
+      version: res["version"] || null,
+      model: rb["board-name"] || res["board"] || null,
+      uptime: res["uptime"] || null,
       cpuLoad: parseInt(res["cpu-load"]) || 0,
       freeMemory: parseInt(res["free-memory"]) || 0
     };
@@ -141,4 +152,13 @@ async function getSystemInfo(router) {
   }
 }
 
-module.exports = { addHotspotUser, removeHotspotUser, disconnectActiveUser, getActiveUsers, ensureBandwidthProfile, getSystemInfo, getClient };
+module.exports = {
+  addHotspotUser,
+  removeHotspotUser,
+  disconnectActiveUser,
+  getActiveUsers,
+  ensureBandwidthProfile,
+  getSystemInfo,
+  getClient,
+  isAvailable
+};

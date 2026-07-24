@@ -36,8 +36,11 @@ app.use("/connect", require("./src/routes/router-connect"));
 const paymentsRouter = require("./src/routes/payments");
 app.post("/callback", paymentsRouter.mpesaCallback);
 
-// Admin SPA
-app.get("/admin*", (req, res) => {
+// Admin SPA - Express 5 compatible named wildcards
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
+app.get("/admin/*path", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
 });
 
@@ -46,8 +49,8 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
-// 404 for unknown API
-app.use("/api/*", (req, res) => {
+// 404 for unknown API routes - Express 5 compatible (no wildcard needed)
+app.use("/api", (req, res) => {
   res.status(404).json({ error: "Endpoint not found" });
 });
 
