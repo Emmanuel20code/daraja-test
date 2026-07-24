@@ -1,2 +1,7 @@
-node_modules
+node_modules/
 .env
+.env.local
+*.log
+logs/
+npm-debug.log*
+.DS_Store
