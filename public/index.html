@@ -1,71 +1,283 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EMMATECH WiFi</title>
-<link rel="stylesheet" href="style.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:linear-gradient(135deg,#0a3954 0%,#0d4d70 50%,#1a6b94 100%);min-height:100vh;color:#fff;padding:16px}
+.container{max-width:480px;margin:0 auto}
+.header{text-align:center;padding:28px 20px 20px;background:rgba(255,255,255,.06);border-radius:20px;margin-bottom:20px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)}
+.logo{font-size:38px;font-weight:900;color:#ff9800;letter-spacing:-1px;text-shadow:0 2px 20px rgba(255,152,0,.4)}
+.tagline{font-size:13px;opacity:.7;margin-top:6px;letter-spacing:1px}
+.support{background:rgba(255,152,0,.15);border:1px solid rgba(255,152,0,.3);border-radius:10px;padding:10px 16px;margin-top:14px;font-size:13px;display:flex;align-items:center;gap:8px;justify-content:center}
+.section-title{font-size:16px;font-weight:600;margin:20px 0 12px;opacity:.85;letter-spacing:.5px;text-transform:uppercase;font-size:12px}
+.packages{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px 14px;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden}
+.card:hover,.card.popular{background:rgba(255,152,0,.15);border-color:rgba(255,152,0,.5);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.card.popular::before{content:'POPULAR';position:absolute;top:8px;right:-12px;background:#ff9800;color:#fff;font-size:9px;font-weight:700;padding:3px 16px;transform:rotate(35deg);letter-spacing:1px}
+.card-name{font-size:13px;opacity:.7;margin-bottom:6px;font-weight:500}
+.card-price{font-size:26px;font-weight:800;color:#ff9800;line-height:1}
+.card-price span{font-size:13px;font-weight:400;opacity:.7}
+.card-duration{font-size:12px;margin:6px 0 4px;font-weight:600;opacity:.9}
+.card-speed{font-size:11px;opacity:.55;margin-top:4px}
+.card-devices{font-size:11px;opacity:.55}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s;letter-spacing:.3px}
+.btn-voucher{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn-voucher:hover{background:rgba(255,255,255,.18)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-end;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:#0d2d40;border-radius:24px 24px 0 0;padding:28px 24px 36px;width:100%;max-height:90vh;overflow-y:auto;border-top:1px solid rgba(255,255,255,.1)}
+.modal h3{font-size:20px;font-weight:700;margin-bottom:6px}
+.modal-pkg{font-size:14px;opacity:.6;margin-bottom:24px}
+.modal-price{font-size:32px;font-weight:800;color:#ff9800;margin-bottom:20px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:13px;opacity:.7;margin-bottom:6px}
+.input-group input{width:100%;padding:14px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:#fff;font-size:15px;outline:none;transition:border .2s}
+.input-group input:focus{border-color:#ff9800}
+.input-group input::placeholder{opacity:.4}
+.btn-pay{background:linear-gradient(135deg,#ff9800,#ff6d00);color:#fff;box-shadow:0 4px 20px rgba(255,152,0,.4)}
+.btn-pay:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,152,0,.5)}
+.btn-pay:disabled{opacity:.5;transform:none;cursor:not-allowed}
+.btn-cancel{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.1);margin-top:8px;font-size:14px;padding:12px}
+.status-card{background:rgba(255,255,255,.06);border-radius:16px;padding:20px;margin-top:16px;text-align:center;display:none}
+.status-card.show{display:block}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,152,0,.2);border-top-color:#ff9800;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-icon{font-size:48px;margin-bottom:12px}
+.status-msg{font-size:15px;margin-top:8px;opacity:.8}
+.receipt-box{background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.3);border-radius:12px;padding:14px;margin-top:12px;font-size:13px}
+.voucher-section{margin-top:6px}
+@media(max-width:360px){.packages{grid-template-columns:1fr}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a6b94;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:200;transition:transform .3s;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:#c0392b}
+.toast.success{background:#27ae60}
+</style>
 </head>
-
 <body>
+<div class="container">
+  <div class="header" id="header">
+    <div class="logo" id="brandName">EMMATECH</div>
+    <p class="tagline">Fast &bull; Reliable &bull; Affordable Internet</p>
+    <div class="support" id="supportInfo">&#128222; Customer Care: Loading...</div>
+  </div>
 
-<div class="header">
-    <h1>EMMATECH</h1>
-    <p>Fast • Reliable • Affordable Internet</p>
+  <div class="section-title">Choose Your Package</div>
+  <div class="packages" id="packageGrid">Loading packages...</div>
 
-    <div class="support">
-        📞 Customer Care: 0768926965
+  <div class="voucher-section">
+    <button class="btn btn-voucher" onclick="showVoucherModal()">&#127977; Redeem a Voucher</button>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <h3>&#128242; M-PESA Payment</h3>
+    <div class="modal-pkg" id="modalPkgName"></div>
+    <div class="modal-price" id="modalPrice"></div>
+
+    <div id="payForm">
+      <div class="input-group">
+        <label>M-PESA Phone Number</label>
+        <input type="tel" id="phoneInput" placeholder="07XXXXXXXX or 2547XXXXXXXX" inputmode="numeric">
+      </div>
+      <button class="btn btn-pay" id="payBtn" onclick="submitPayment()">Pay with M-PESA</button>
+      <button class="btn btn-cancel" onclick="closeModal('payModal')">Cancel</button>
     </div>
+
+    <div class="status-card" id="payStatus">
+      <div class="spinner" id="paySpinner"></div>
+      <div class="status-icon" id="statusIcon" style="display:none"></div>
+      <div style="font-size:15px;font-weight:700" id="statusTitle">Waiting for payment...</div>
+      <div class="status-msg" id="statusMsg">Check your phone and enter your M-PESA PIN</div>
+      <div class="receipt-box" id="receiptBox" style="display:none"></div>
+      <button class="btn btn-cancel" id="doneBtn" style="display:none" onclick="onPaymentSuccess()">&#127760; Browse the Internet</button>
+      <button class="btn btn-cancel" id="retryBtn" style="display:none" onclick="retryPayment()">Try Again</button>
+    </div>
+  </div>
 </div>
 
-<h2 class="title">Choose Your Package</h2>
-
-<div class="packages">
-
-<div class="card" onclick="buyPackage(10,'1 Hour')">
-<h3>1 Hour</h3>
-<h1>KES 10</h1>
-<p>Unlimited Access</p>
+<!-- Voucher Modal -->
+<div class="modal-overlay" id="voucherModal">
+  <div class="modal">
+    <h3>&#127977; Redeem Voucher</h3>
+    <p style="opacity:.6;font-size:13px;margin-bottom:20px">Enter your voucher code to get internet access</p>
+    <div class="input-group">
+      <label>Voucher Code</label>
+      <input type="text" id="voucherInput" placeholder="e.g. EMAB12CD34" autocapitalize="characters" style="letter-spacing:2px;text-transform:uppercase">
+    </div>
+    <button class="btn btn-pay" onclick="redeemVoucher()">Redeem</button>
+    <button class="btn btn-cancel" onclick="closeModal('voucherModal')">Cancel</button>
+  </div>
 </div>
 
-<div class="card" onclick="buyPackage(20,'3 Hours')">
-<h3>3 Hours</h3>
-<h1>KES 20</h1>
-<p>Unlimited Access</p>
-</div>
+<div class="toast" id="toast"></div>
 
-<div class="card" onclick="buyPackage(35,'24 Hours')">
-<h3>24 Hours</h3>
-<h1>KES 35</h1>
-<p>Unlimited Access</p>
-</div>
+<script>
+let selectedPackage = null;
+let checkoutRequestId = null;
+let paymentId = null;
+let pollTimer = null;
 
-<div class="card" onclick="buyPackage(100,'3 Days')">
-<h3>3 Days</h3>
-<h1>KES 100</h1>
-<p>Unlimited Access</p>
-</div>
+// Load branding
+async function loadBranding() {
+  try {
+    const r = await fetch('/api/portal/branding');
+    const { branding } = await r.json();
+    if (branding.brand_name || branding.name) {
+      document.getElementById('brandName').textContent = branding.brand_name || branding.name;
+      document.title = (branding.brand_name || branding.name) + ' WiFi';
+    }
+    const phone = branding.support_phone;
+    document.getElementById('supportInfo').innerHTML = phone
+      ? `&#128222; Customer Care: <a href="tel:${phone}" style="color:#ff9800;text-decoration:none">${phone}</a>`
+      : '';
+    if (branding.primary_color) document.body.style.background = `linear-gradient(135deg, ${branding.primary_color} 0%, ${branding.primary_color}cc 100%)`;
+  } catch(e) {}
+}
 
-<div class="card" onclick="buyPackage(200,'1 Week')">
-<h3>1 Week</h3>
-<h1>KES 200</h1>
-<p>Unlimited Access</p>
-</div>
+// Load packages
+async function loadPackages() {
+  try {
+    const r = await fetch('/api/portal/packages');
+    const { packages } = await r.json();
+    const grid = document.getElementById('packageGrid');
+    if (!packages.length) { grid.innerHTML = '<p style="opacity:.5;grid-column:1/-1;text-align:center">No packages available</p>'; return; }
+    const durations = { '1h':'1 Hour','3h':'3 Hours','6h':'6 Hours','12h':'12 Hours','24h':'24 Hours','1d':'1 Day','2d':'2 Days','3d':'3 Days','7d':'1 Week','30d':'1 Month' };
+    const popular = packages[Math.floor(packages.length/2)]?.id;
+    grid.innerHTML = packages.map(pkg => `
+      <div class="card ${pkg.id===popular?'popular':''}" onclick="openPayModal(${JSON.stringify(pkg).replace(/"/g,'&quot;')})">
+        <div class="card-name">${pkg.name}</div>
+        <div class="card-price">KES ${pkg.price}<span>/pkg</span></div>
+        <div class="card-duration">${durations[pkg.duration]||pkg.duration}</div>
+        <div class="card-speed">${pkg.download_speed}Mbps down &bull; ${pkg.upload_speed}Mbps up</div>
+        <div class="card-devices">${pkg.device_limit>1?`Up to ${pkg.device_limit} devices`:'1 device'}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('packageGrid').innerHTML = '<p style="color:#ff6b6b;grid-column:1/-1">Failed to load packages. Please refresh.</p>';
+  }
+}
 
-<div class="card" onclick="buyPackage(500,'1 Month')">
-<h3>1 Month</h3>
-<h1>KES 500</h1>
-<p>Unlimited Access</p>
-</div>
+function openPayModal(pkg) {
+  selectedPackage = pkg;
+  document.getElementById('modalPkgName').textContent = pkg.name + ' — ' + (pkg.duration);
+  document.getElementById('modalPrice').textContent = 'KES ' + pkg.price;
+  document.getElementById('payForm').style.display = 'block';
+  document.getElementById('payStatus').classList.remove('show');
+  document.getElementById('payModal').classList.add('show');
+  setTimeout(()=>document.getElementById('phoneInput').focus(),300);
+}
 
-</div>
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
 
-<button class="voucher">
-Redeem Voucher
-</button>
+async function submitPayment() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  if (!phone || phone.length < 9) { showToast('Enter a valid phone number','error'); return; }
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    const r = await fetch('/api/portal/stkpush', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, packageId: selectedPackage.id })
+    });
+    const data = await r.json();
+    if (!r.ok) { showToast(data.error||'Payment failed','error'); btn.disabled=false; btn.textContent='Pay with M-PESA'; return; }
+    checkoutRequestId = data.checkoutRequestId;
+    paymentId = data.paymentId;
+    showPayStatus('pending');
+    startPolling();
+  } catch(e) {
+    showToast('Network error, please try again','error');
+    btn.disabled=false; btn.textContent='Pay with M-PESA';
+  }
+}
 
-<script src="app.js"></script>
+function showPayStatus(state, data={}) {
+  document.getElementById('payForm').style.display='none';
+  const st = document.getElementById('payStatus');
+  st.classList.add('show');
+  const spinner = document.getElementById('paySpinner');
+  const icon = document.getElementById('statusIcon');
+  const title = document.getElementById('statusTitle');
+  const msg = document.getElementById('statusMsg');
+  const receipt = document.getElementById('receiptBox');
+  const done = document.getElementById('doneBtn');
+  const retry = document.getElementById('retryBtn');
+  receipt.style.display='none'; done.style.display='none'; retry.style.display='none';
+  if (state==='pending') {
+    spinner.style.display='block'; icon.style.display='none';
+    title.textContent='Waiting for payment...';
+    msg.textContent='Check your phone and enter your M-PESA PIN';
+  } else if (state==='paid') {
+    spinner.style.display='none'; icon.style.display='block';
+    icon.textContent='&#9989;'; title.textContent='Payment Successful!';
+    msg.textContent='Your internet is being activated...';
+    if (data.receipt) { receipt.style.display='block'; receipt.innerHTML=`Receipt: <strong>${data.receipt}</strong><br>Amount: <strong>KES ${data.amount}</strong>`; }
+    done.style.display='block';
+  } else if (state==='failed') {
+    spinner.style.display='none'; icon.style.display='block';
+    icon.textContent='&#10060;'; title.textContent='Payment Failed';
+    msg.textContent='Payment was cancelled or declined. Please try again.';
+    retry.style.display='block';
+  }
+}
 
+function startPolling() {
+  let attempts = 0;
+  pollTimer = setInterval(async ()=>{
+    attempts++;
+    if (attempts > 40) { clearInterval(pollTimer); showPayStatus('failed'); return; }
+    try {
+      const r = await fetch(`/api/portal/payment-status/${checkoutRequestId}`);
+      const data = await r.json();
+      if (data.status==='paid') { clearInterval(pollTimer); showPayStatus('paid',data); showToast('Payment successful! Internet activated &#127760;','success'); }
+      else if (data.status==='failed') { clearInterval(pollTimer); showPayStatus('failed'); }
+    } catch(e) {}
+  }, 4000);
+}
+
+function retryPayment() {
+  document.getElementById('payForm').style.display='block';
+  document.getElementById('payStatus').classList.remove('show');
+  document.getElementById('payBtn').disabled=false;
+  document.getElementById('payBtn').textContent='Pay with M-PESA';
+}
+
+function onPaymentSuccess() { closeModal('payModal'); showToast('Enjoy your internet!','success'); }
+
+function showVoucherModal() { document.getElementById('voucherModal').classList.add('show'); }
+
+async function redeemVoucher() {
+  const code = document.getElementById('voucherInput').value.trim().toUpperCase();
+  if (!code) { showToast('Enter a voucher code','error'); return; }
+  try {
+    const r = await fetch('/api/portal/voucher/redeem',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    const data = await r.json();
+    if (!r.ok) { showToast(data.error||'Invalid voucher','error'); return; }
+    showToast(data.message||'Voucher redeemed! Enjoy your internet.','success');
+    closeModal('voucherModal');
+  } catch(e) { showToast('Network error','error'); }
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg; t.className = 'toast show ' + type;
+  setTimeout(()=>t.className='toast',3500);
+}
+
+loadBranding();
+loadPackages();
+</script>
 </body>
 </html>

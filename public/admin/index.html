@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMMATECH Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2a2f45;--text:#e8eaf0;--text2:#8b92a9;--primary:#ff9800;--primary-dim:rgba(255,152,0,.15);--green:#2ecc71;--red:#e74c3c;--blue:#3498db;--sidebar-w:240px}
+body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;max-width:400px}
+.login-logo{font-size:32px;font-weight:900;color:var(--primary);text-align:center;margin-bottom:6px}
+.login-sub{text-align:center;font-size:13px;color:var(--text2);margin-bottom:32px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.form-group input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;transition:border .2s}
+.form-group input:focus{border-color:var(--primary)}
+.btn-primary{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-primary:hover{background:#f57c00}
+.btn-sm{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-success{background:var(--green);color:#fff}.btn-danger{background:var(--red);color:#fff}.btn-blue{background:var(--blue);color:#fff}
+#app{display:none;height:100vh;overflow:hidden}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;transition:transform .3s}
+.sidebar-logo{padding:20px 20px 16px;font-size:22px;font-weight:900;color:var(--primary);border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-logo span{font-size:11px;color:var(--text2);font-weight:400;display:block;margin-top:2px}
+.nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--text2);transition:.15s;margin-bottom:2px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--primary-dim);color:var(--primary);font-weight:600}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px}
+.sidebar-footer{padding:14px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+.main{margin-left:var(--sidebar-w);height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:40;gap:12px;flex-shrink:0}
+.topbar-title{font-size:18px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.notif-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:16px;position:relative}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.admin-pill{background:var(--surface2);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text2)}
+.content{flex:1;padding:24px}
+.page{display:none}
+.page.active{display:block}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.stat-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.stat-value{font-size:28px;font-weight:800;margin:6px 0 2px}
+.stat-sub{font-size:12px;color:var(--text2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(46,204,113,.15);color:var(--green)}
+.badge-red{background:rgba(231,76,60,.15);color:var(--red)}
+.badge-yellow{background:rgba(255,152,0,.15);color:var(--primary)}
+.badge-blue{background:rgba(52,152,219,.15);color:var(--blue)}
+.badge-gray{background:rgba(139,146,169,.15);color:var(--text2)}
+.search-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.search-bar input,.search-bar select{padding:9px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;min-width:180px}
+.pagination{display:flex;align-items:center;gap:8px;margin-top:16px;justify-content:flex-end}
+.pagination button{padding:6px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:13px}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+.pagination span{font-size:13px;color:var(--text2)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:20px}
+.modal-box .form-group{margin-bottom:14px}
+.modal-box .btn-row{display:flex;gap:10px;margin-top:20px}
+.modal-box .btn-row button{flex:1}
+.chart-wrap{width:100%;height:220px;position:relative;overflow:hidden}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:180px;padding:0 4px}
+.chart-bar{flex:1;background:var(--primary);border-radius:4px 4px 0 0;min-width:8px;transition:height .4s;cursor:pointer;opacity:.8}
+.chart-bar:hover{opacity:1}
+.chart-x{display:flex;gap:4px;padding:4px 4px 0;overflow:hidden}
+.chart-x span{flex:1;font-size:9px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.router-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
+.router-icon{font-size:28px}
+.router-info{flex:1}
+.router-name{font-weight:700;font-size:15px}
+.router-meta{font-size:12px;color:var(--text2);margin-top:3px}
+.router-actions{display:flex;gap:8px}
+.toggle-sidebar{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px}
+@media(max-width:768px){
+  .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));box-shadow:4px 0 20px rgba(0,0,0,.5)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .toggle-sidebar{display:block}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">EMMATECH</div>
+    <div class="login-sub">WiFi Billing System &mdash; Admin Portal</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="loginError" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none"></div>
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <p style="text-align:center;font-size:12px;color:var(--text2);margin-top:14px">Default: admin / Admin@1234</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">EMMATECH<span>WiFi Billing System</span></div>
+    <div class="nav">
+      <div class="nav-item active" onclick="nav('dashboard')"><span class="icon">&#128202;</span> Dashboard</div>
+      <div class="nav-item" onclick="nav('live')"><span class="icon">&#128100;</span> Live Users <span class="live-dot" style="margin-left:auto"></span></div>
+      <div class="nav-item" onclick="nav('routers')"><span class="icon">&#128225;</span> Routers</div>
+      <div class="nav-item" onclick="nav('packages')"><span class="icon">&#128230;</span> Packages</div>
+      <div class="nav-item" onclick="nav('customers')"><span class="icon">&#128101;</span> Customers</div>
+      <div class="nav-item" onclick="nav('devices')"><span class="icon">&#128241;</span> Devices</div>
+      <div class="nav-item" onclick="nav('payments')"><span class="icon">&#128176;</span> Payments</div>
+      <div class="nav-item" onclick="nav('sessions')"><span class="icon">&#128279;</span> Sessions</div>
+      <div class="nav-item" onclick="nav('vouchers')"><span class="icon">&#127977;</span> Vouchers</div>
+      <div class="nav-item" onclick="nav('reports')"><span class="icon">&#128200;</span> Reports</div>
+      <div class="nav-item" onclick="nav('logs')"><span class="icon">&#128195;</span> Logs</div>
+      <div class="nav-item" onclick="nav('notifications')"><span class="icon">&#128276;</span> Notifications <span class="nav-badge" id="notifCount" style="display:none">0</span></div>
+      <div class="nav-item" onclick="nav('settings')"><span class="icon">&#9881;</span> Settings</div>
+    </div>
+    <div class="sidebar-footer" id="adminInfo">Loading...</div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="toggle-sidebar" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-right">
+        <button class="notif-btn" onclick="nav('notifications')" id="notifBtn">&#128276;</button>
+        <div class="admin-pill" id="topAdmin">Admin</div>
+        <button class="btn-sm btn-danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="charts-row">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Revenue (30 days)</div></div>
+            <div class="chart-wrap"><div class="chart-bars" id="revenueChart"></div><div class="chart-x" id="chartX"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Package Sales</div></div>
+            <div id="pkgSales"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Payments</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Phone</th><th>Package</th><th>Amount</th><th>Status</th><th>Time</th></tr></thead><tbody id="recentPayTbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- LIVE USERS -->
+      <div class="page" id="page-live">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><span class="live-dot"></span> Live Users</div><button class="btn-sm btn-blue" onclick="loadLive()">&#8635; Refresh</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Phone</th><th>Package</th><th>Router</th><th>MAC</th><th>Started</th><th>Expires</th><th>Action</th></tr></thead><tbody id="liveTbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ROUTERS -->
+      <div class="page" id="page-routers">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn-sm btn-success" onclick="showRouterModal()">+ Add Router</button>
+          <button class="btn-sm btn-blue" onclick="genOnboardToken()">&#128279; Generate Onboarding Token</button>
+        </div>
+        <div id="routerList">Loading...</div>
+      </div>
+
+      <!-- PACKAGES -->
+      <div class="page" id="page-packages">
+        <div style="margin-bottom:16px"><button class="btn-sm btn-success" onclick="showPkgModal()">+ New Package</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Price</th><th>Duration</th><th>Down</th><th>Up</th><th>Devices</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pkgTbl"></tbody></table></div>
+      </div>
+
+      <!-- CUSTOMERS -->
+      <div class="page" id="page-customers">
+        <div class="search-bar"><input id="custSearch" placeholder="Search phone, name..." oninput="loadCustomers()"><button class="btn-sm btn-success" onclick="showCustModal()">+ Add Customer</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Phone</th><th>Name</th><th>Email</th><th>Status</th><th>Sessions</th><th>Payments</th><th>Joined</th></tr></thead><tbody id="custTbl"></tbody></table></div>
+        <div class="pagination" id="custPag"></div>
+      </div>
+
+      <!-- DEVICES -->
+      <div class="page" id="page-devices">
+        <div class="search-bar"><input id="devSearch" placeholder="Search MAC, phone..." oninput="loadDevices()"></div>
+        <div class="table-wrap"><table><thead><tr><th>MAC</th><th>Name</th><th>Customer</th><th>Router</th><th>Status</th><th>Last Seen</th><th>Actions</th></tr></thead><tbody id="devTbl"></tbody></table></div>
+      </div>
+
+      <!-- PAYMENTS -->
+      <div class="page" id="page-payments">
+        <div class="search-bar">
+          <input id="pmtSearch" placeholder="Search phone..." oninput="loadPayments()">
+          <select id="pmtStatus" onchange="loadPayments()"><option value="">All</option><option>pending</option><option>paid</option><option>failed</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Phone</th><th>Package</th><th>Amount</th><th>Receipt</th><th>Status</th><th>Time</th><th>Action</th></tr></thead><tbody id="pmtTbl"></tbody></table></div>
+        <div class="pagination" id="pmtPag"></div>
+      </div>
+
+      <!-- SESSIONS -->
+      <div class="page" id="page-sessions">
+        <div class="search-bar">
+          <select id="sesStatus" onchange="loadSessions()"><option value="">All</option><option>active</option><option>expired</option><option>disconnected</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Phone</th><th>Package</th><th>Router</th><th>MAC</th><th>Start</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead><tbody id="sesTbl"></tbody></table></div>
+      </div>
+
+      <!-- VOUCHERS -->
+      <div class="page" id="page-vouchers">
+        <div style="margin-bottom:16px"><button class="btn-sm btn-success" onclick="showVoucherGenModal()">+ Generate Vouchers</button></div>
+        <div class="search-bar">
+          <select id="vouchStatus" onchange="loadVouchers()"><option value="">All</option><option>unused</option><option>used</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Code</th><th>Package</th><th>Status</th><th>Customer</th><th>Used At</th><th>Expires</th></tr></thead><tbody id="vouchTbl"></tbody></table></div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="page" id="page-reports">
+        <div class="search-bar">
+          <select id="reportPeriod" onchange="loadReports()">
+            <option value="7d">Last 7 Days</option>
+            <option value="30d" selected>Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="1y">Last Year</option>
+          </select>
+        </div>
+        <div class="stats-grid" id="reportStats"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Revenue by Package</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Package</th><th>Sales</th><th>Revenue</th></tr></thead><tbody id="reportPkgTbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- LOGS -->
+      <div class="page" id="page-logs">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Audit Logs</div><button class="btn-sm btn-blue" onclick="loadLogs()">&#8635; Refresh</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Admin</th><th>Action</th><th>Resource</th><th>Description</th><th>IP</th><th>Time</th></tr></thead><tbody id="logTbl"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Router Events</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Router</th><th>Event</th><th>Message</th><th>Time</th></tr></thead><tbody id="eventTbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="page" id="page-notifications">
+        <div style="margin-bottom:16px"><button class="btn-sm btn-blue" onclick="markAllRead()">Mark All Read</button></div>
+        <div id="notifList">Loading...</div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="card">
+          <div class="card-header"><div class="card-title">System Settings</div></div>
+          <div id="settingsForm">Loading...</div>
+          <div style="margin-top:16px"><button class="btn-sm btn-success" onclick="saveSettings()">Save Settings</button></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Change Password</div></div>
+          <div class="form-group"><label>Current Password</label><input type="password" id="curPass" style="max-width:300px"></div>
+          <div class="form-group"><label>New Password</label><input type="password" id="newPass" style="max-width:300px"></div>
+          <button class="btn-sm btn-success" onclick="changePass()">Update Password</button>
+        </div>
+      </div>
+
+    </div><!-- content -->
+  </div><!-- main -->
+</div><!-- app -->
+
+<!-- Modals -->
+<div class="modal-bg" id="routerModal">
+  <div class="modal-box">
+    <h3>Add / Edit Router</h3>
+    <div class="form-group"><label>Name</label><input id="r_name" placeholder="e.g. Router-Nairobi"></div>
+    <div class="form-group"><label>Location</label><input id="r_loc" placeholder="e.g. Main Hall"></div>
+    <div class="form-group"><label>IP Address</label><input id="r_ip" placeholder="192.168.88.1"></div>
+    <div class="form-group"><label>API Port</label><input id="r_port" value="8728" type="number"></div>
+    <div class="form-group"><label>API Username</label><input id="r_user" placeholder="admin"></div>
+    <div class="form-group"><label>API Password</label><input id="r_pass" type="password"></div>
+    <div class="btn-row">
+      <button class="btn-sm btn-success" onclick="saveRouter()">Save</button>
+      <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="closeModalB('routerModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="pkgModal">
+  <div class="modal-box">
+    <h3>Add / Edit Package</h3>
+    <div class="form-group"><label>Name</label><input id="p_name"></div>
+    <div class="form-group"><label>Description</label><input id="p_desc"></div>
+    <div class="form-group"><label>Price (KES)</label><input id="p_price" type="number"></div>
+    <div class="form-group"><label>Duration (e.g. 1h, 24h, 7d, 30d)</label><input id="p_duration"></div>
+    <div class="form-group"><label>Download Speed (Mbps)</label><input id="p_dl" type="number" value="5"></div>
+    <div class="form-group"><label>Upload Speed (Mbps)</label><input id="p_ul" type="number" value="3"></div>
+    <div class="form-group"><label>Max Devices</label><input id="p_dev" type="number" value="1"></div>
+    <div class="form-group"><label>Display Order</label><input id="p_order" type="number" value="0"></div>
+    <div class="btn-row">
+      <button class="btn-sm btn-success" onclick="savePkg()">Save</button>
+      <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="closeModalB('pkgModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="custModal">
+  <div class="modal-box">
+    <h3>Add Customer</h3>
+    <div class="form-group"><label>Phone</label><input id="c_phone" placeholder="07XXXXXXXX"></div>
+    <div class="form-group"><label>Full Name</label><input id="c_name"></div>
+    <div class="form-group"><label>Email</label><input id="c_email" type="email"></div>
+    <div class="btn-row">
+      <button class="btn-sm btn-success" onclick="saveCust()">Save</button>
+      <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="closeModalB('custModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="voucherGenModal">
+  <div class="modal-box">
+    <h3>Generate Vouchers</h3>
+    <div class="form-group"><label>Package</label><select id="vg_pkg" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text)"></select></div>
+    <div class="form-group"><label>Quantity (max 100)</label><input id="vg_qty" type="number" value="10" min="1" max="100"></div>
+    <div class="btn-row">
+      <button class="btn-sm btn-success" onclick="genVouchers()">Generate</button>
+      <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="closeModalB('voucherGenModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="tokenModal">
+  <div class="modal-box">
+    <h3>&#128279; Router Onboarding</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Run these two commands on your MikroTik router terminal:</p>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:monospace;font-size:12px;line-height:1.8;word-break:break-all" id="tokenScript"></div>
+    <p style="font-size:12px;color:var(--text2);margin-top:12px">The token is single-use and expires after first use.</p>
+    <button class="btn-sm" style="background:var(--border);color:var(--text);margin-top:14px" onclick="closeModalB('tokenModal')">Close</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="toast-modal" style="z-index:300;pointer-events:none">
+  <div id="adminToast" style="background:#1a6b94;color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;pointer-events:none;display:none;max-width:400px;text-align:center"></div>
+</div>
+
+<script src="/admin/app.js"></script>
+</body>
+</html>
