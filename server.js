@@ -7,6 +7,7 @@ const moment = require("moment");
 const app = express();
 
 app.use(express.json());
+app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
 
