@@ -67,11 +67,17 @@ app.get("/token", async (req, res) => {
     res.json({
       access_token: token
     });
-  } catch (error) {
+  } catch(error){
+
+    console.log("STATUS:", error.response?.status);
+    console.log("DATA:", error.response?.data);
+    console.log("MESSAGE:", error.message);
+
     res.status(500).json(
       error.response?.data || error.message
     );
-  }
+
+}
 });
 
 
@@ -119,13 +125,15 @@ app.post("/stkpush", async (req, res) => {
 
   } catch(error){
 
-    console.log(error.response?.data || error.message);
+    console.log("STATUS:", error.response?.status);
+    console.log("DATA:", error.response?.data);
+    console.log("MESSAGE:", error.message);
 
     res.status(500).json(
       error.response?.data || error.message
     );
 
-  }
+}
 
 });
 
