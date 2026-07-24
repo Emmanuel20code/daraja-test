@@ -18,9 +18,7 @@ const MPESA_BASE_URL =
 
 
 // Test
-app.get("/", (req, res) => {
-  res.send("✅ Daraja WiFi Payment Server Running");
-});
+
 
 
 // Get token
