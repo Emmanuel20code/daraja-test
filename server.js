@@ -1,168 +1,86 @@
 require("dotenv").config();
-
-const express = require("express");
 const axios = require("axios");
+const moment = require("moment");
 
-const app = express();
+const MPESA_ENV = process.env.MPESA_ENV || "sandbox"; // "sandbox" or "production"
+const MPESA_BASE_URL = MPESA_ENV === "production" ? "https://production.safaricom.co.ke" : "https://api.safaricom.co.ke";
 
-app.use(express.json());
+// ✅ Ensure required env variables are set
+const REQUIRED_ENV_VARS = [
+    "MPESA_CONSUMER_KEY",
+    "MPESA_CONSUMER_SECRET",
+    "MPESA_SHORTCODE",
+    "MPESA_PASSKEY",
+    "MPESA_CALLBACK_URL"
+];
 
-const PORT = process.env.PORT || 3000;
-
-
-// Test server
-app.get("/", (req, res) => {
-  res.send("✅ Daraja Production Server Running");
-});
-
-
-// Get OAuth Token
-async function getAccessToken() {
-  const auth = Buffer.from(
-    `${process.env.CONSUMER_KEY}:${process.env.CONSUMER_SECRET}`
-  ).toString("base64");
-
-  const response = await axios.get(
-    "https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-    {
-      headers: {
-        Authorization: `Basic ${auth}`
-      }
+for (const varName of REQUIRED_ENV_VARS) {
+    if (!process.env[varName]) {
+        console.error(`❌ Missing environment variable: ${varName}`);
+        process.exit(1); // Stop the server if important variables are missing
     }
-  );
-
-  return response.data.access_token;
 }
 
+// ✅ Get access token
+const getAccessToken = async () => {
+    const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString("base64");
 
-// Generate timestamp
-function getTimestamp() {
-  const date = new Date();
+    try {
+        const response = await axios.get(`${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
+            headers: { Authorization: `Basic ${auth}` }
+        });
+        console.log("✅ MPesa Access Token Obtained Successfully");
+        return response.data.access_token;
+    } catch (error) {
+        console.error("❌ MPesa Auth Error:", error.response ? error.response.data : error.message);
+        return null;
+    }
+};
 
-  return (
-    date.getFullYear() +
-    String(date.getMonth() + 1).padStart(2, "0") +
-    String(date.getDate()).padStart(2, "0") +
-    String(date.getHours()).padStart(2, "0") +
-    String(date.getMinutes()).padStart(2, "0") +
-    String(date.getSeconds()).padStart(2, "0")
-  );
-}
+// ✅ STK Push
+const stkPush = async (phone, amount, transactionId) => {
+    console.log(`📩 STK Push Request: Phone: ${phone}, Amount: ${amount}, TransactionID: ${transactionId}`);
 
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+        console.error("❌ Failed to get MPesa access token. STK Push aborted.");
+        return null;
+    }
 
-// Generate password
-function getPassword(timestamp) {
-  return Buffer.from(
-    process.env.SHORTCODE +
-    process.env.PASSKEY +
-    timestamp
-  ).toString("base64");
-}
+    const timestamp = moment().format("YYYYMMDDHHmmss");
+    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
 
-
-// Token test
-app.get("/token", async (req, res) => {
-  try {
-    const token = await getAccessToken();
-    res.json({
-      access_token: token
-    });
-  } catch(error){
-
-    console.log("STATUS:", error.response?.status);
-    console.log("DATA:", error.response?.data);
-    console.log("MESSAGE:", error.message);
-
-    res.status(500).json(
-      error.response?.data || error.message
-    );
-
-}
-});
-
-
-// STK Push
-app.post("/stkpush", async (req, res) => {
-
-  try {
-
-    const token = await getAccessToken();
-
-    const timestamp = getTimestamp();
-
-    const password = getPassword(timestamp);
-
-
-    const response = await axios.post(
-
-      "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-
-      {
-        BusinessShortCode: process.env.SHORTCODE,
+    const payload = {
+        BusinessShortCode: process.env.MPESA_SHORTCODE,
         Password: password,
         Timestamp: timestamp,
-        TransactionType: "CustomerBuyGoodsOnline",
-        Amount: 1,
-        PartyA: process.env.PHONE,
-        PartyB: process.env.SHORTCODE,
-        PhoneNumber: process.env.PHONE,
-        CallBackURL: process.env.CALLBACK_URL,
-        AccountReference: "Test",
-        TransactionDesc: "Payment Test"
-      },
+        TransactionType: "CustomerPayBillOnline",
+        Amount: amount,
+        PartyA: phone,
+        PartyB: process.env.MPESA_SHORTCODE,
+        PhoneNumber: phone,
+        CallBackURL: process.env.MPESA_CALLBACK_URL,
+        AccountReference: "WiFi Payment",
+        TransactionDesc: `WiFi Payment - ${transactionId}`
+    };
 
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+    try {
+        console.log("📤 Sending STK Push...");
+        const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+
+        if (response.data.ResponseCode === "0") {
+            console.log("✅ STK Push Successful:", response.data);
+            return response.data;
+        } else {
+            console.error("❌ STK Push Failed:", response.data);
+            return null;
         }
-      }
+    } catch (error) {
+        console.error("❌ MPesa STK Push Error:", error.response ? error.response.data : error.message);
+        return null;
+    }
+};
 
-    );
-
-
-    res.json(response.data);
-
-
-  } catch(error){
-
-    console.log("STATUS:", error.response?.status);
-    console.log("DATA:", error.response?.data);
-    console.log("MESSAGE:", error.message);
-
-    res.status(500).json(
-      error.response?.data || error.message
-    );
-
-}
-
-});
-
-
-// Safaricom callback
-app.post("/callback", (req,res)=>{
-
-  console.log(
-    "M-PESA CALLBACK:"
-  );
-
-  console.log(
-    JSON.stringify(req.body,null,2)
-  );
-
-
-  res.json({
-    ResultCode:0,
-    ResultDesc:"Accepted"
-  });
-
-});
-
-
-
-app.listen(PORT,()=>{
-
- console.log(
-  `Server running on port ${PORT}`
- );
-
-});
+module.exports = { stkPush };
