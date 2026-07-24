@@ -29,6 +29,30 @@ async function createTables() {
     )
   `);
   await pool.query(`
+ALTER TABLE packages
+ADD COLUMN IF NOT EXISTS download_speed INTEGER DEFAULT 5
+`);
+
+await pool.query(`
+ALTER TABLE packages
+ADD COLUMN IF NOT EXISTS upload_speed INTEGER DEFAULT 5
+`);
+
+await pool.query(`
+ALTER TABLE packages
+ADD COLUMN IF NOT EXISTS device_limit INTEGER DEFAULT 1
+`);
+
+await pool.query(`
+ALTER TABLE packages
+ADD COLUMN IF NOT EXISTS description TEXT
+`);
+
+await pool.query(`
+ALTER TABLE packages
+ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE
+`);
+  await pool.query(`
   CREATE TABLE IF NOT EXISTS routers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
