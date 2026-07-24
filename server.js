@@ -135,7 +135,8 @@ TransactionType: "CustomerBuyGoodsOnline",
  }
 
  );
-
+   
+console.log("Safaricom Response:", response.data);
 
  res.json(response.data);
 
