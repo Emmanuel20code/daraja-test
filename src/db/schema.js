@@ -6,7 +6,7 @@ async function initDb() {
   const client = await pool.connect();
   try {
 
-    // ── CORE TABLES ────────────────────────────────────────────────────────────
+    // ── CORE TABLES ────────────────────────────────────────────────────────
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS admins (
@@ -301,16 +301,15 @@ async function initDb() {
       )
     `);
 
-    // ── SAFE COLUMN MIGRATIONS (ADD IF NOT EXISTS) ─────────────────────────────
-    // These run on every startup and safely add new columns to existing tables.
-    // Never drops data. Safe to run repeatedly.
+    // ── SAFE COLUMN MIGRATIONS ─────────────────────────────────────────────
+    // Runs every startup. Adds missing columns to pre-existing tables.
+    // Never drops data. Safe to run repeatedly (idempotent).
 
-    const addColumnIfNotExists = async (table, column, definition) => {
+    const col = async (table, column, definition) => {
       try {
         await client.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
       } catch (e) {
-        // Older PostgreSQL versions don't support IF NOT EXISTS on ALTER COLUMN
-        // Fall back to checking pg_columns
+        // Fallback for older Postgres without IF NOT EXISTS support
         const exists = await client.query(
           `SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`,
           [table, column]
@@ -321,37 +320,39 @@ async function initDb() {
       }
     };
 
-    // packages table migrations
-    await addColumnIfNotExists('packages', 'description', 'TEXT');
-    await addColumnIfNotExists('packages', 'download_speed', 'INTEGER DEFAULT 5');
-    await addColumnIfNotExists('packages', 'upload_speed', 'INTEGER DEFAULT 5');
-    await addColumnIfNotExists('packages', 'burst_speed', 'INTEGER');
-    await addColumnIfNotExists('packages', 'priority', 'INTEGER DEFAULT 8');
-    await addColumnIfNotExists('packages', 'data_cap_mb', 'INTEGER');
-    await addColumnIfNotExists('packages', 'unlimited', 'BOOLEAN DEFAULT TRUE');
-    await addColumnIfNotExists('packages', 'device_limit', 'INTEGER DEFAULT 1');
-    await addColumnIfNotExists('packages', 'bandwidth_profile_id', 'INTEGER');
-    await addColumnIfNotExists('packages', 'active', 'BOOLEAN DEFAULT TRUE');
-    await addColumnIfNotExists('packages', 'display_order', 'INTEGER DEFAULT 0');
+    // packages
+    await col('packages', 'description',          'TEXT');
+    await col('packages', 'download_speed',        'INTEGER DEFAULT 5');
+    await col('packages', 'upload_speed',          'INTEGER DEFAULT 5');
+    await col('packages', 'burst_speed',           'INTEGER');
+    await col('packages', 'priority',              'INTEGER DEFAULT 8');
+    await col('packages', 'data_cap_mb',           'INTEGER');
+    await col('packages', 'unlimited',             'BOOLEAN DEFAULT TRUE');
+    await col('packages', 'device_limit',          'INTEGER DEFAULT 1');
+    await col('packages', 'bandwidth_profile_id',  'INTEGER');
+    await col('packages', 'active',                'BOOLEAN DEFAULT TRUE');
+    await col('packages', 'display_order',         'INTEGER DEFAULT 0');
 
-    // routers table migrations
-    await addColumnIfNotExists('routers', 'location', 'TEXT');
-    await addColumnIfNotExists('routers', 'api_port', 'INTEGER DEFAULT 8728');
-    await addColumnIfNotExists('routers', 'api_username', 'TEXT');
-    await addColumnIfNotExists('routers', 'api_password', 'TEXT');
-    await addColumnIfNotExists('routers', 'hotspot_name', "TEXT DEFAULT 'hotspot'");
-    await addColumnIfNotExists('routers', 'routeros_version', 'TEXT');
-    await addColumnIfNotExists('routers', 'model', 'TEXT');
-    await addColumnIfNotExists('routers', 'serial_number', 'TEXT');
-    await addColumnIfNotExists('routers', 'mac_address', 'TEXT');
-    await addColumnIfNotExists('routers', 'token', 'TEXT');
-    await addColumnIfNotExists('routers', 'firmware', 'TEXT');
-    await addColumnIfNotExists('routers', 'uptime', 'TEXT');
-    await addColumnIfNotExists('routers', 'cpu_load', 'INTEGER');
-    await addColumnIfNotExists('routers', 'free_memory', 'INTEGER');
-    await addColumnIfNotExists('routers', 'active_users', 'INTEGER DEFAULT 0');
+    // routers
+    await col('routers', 'location',          'TEXT');
+    await col('routers', 'api_port',          'INTEGER DEFAULT 8728');
+    await col('routers', 'api_username',      'TEXT');
+    await col('routers', 'api_password',      'TEXT');
+    await col('routers', 'hotspot_name',      "TEXT DEFAULT 'hotspot'");
+    await col('routers', 'routeros_version',  'TEXT');
+    await col('routers', 'model',             'TEXT');
+    await col('routers', 'serial_number',     'TEXT');
+    await col('routers', 'mac_address',       'TEXT');
+    await col('routers', 'token',             'TEXT');
+    await col('routers', 'status',            "TEXT DEFAULT 'offline'");
+    await col('routers', 'last_heartbeat',    'TIMESTAMP');          // <-- was missing
+    await col('routers', 'firmware',          'TEXT');
+    await col('routers', 'uptime',            'TEXT');
+    await col('routers', 'cpu_load',          'INTEGER');
+    await col('routers', 'free_memory',       'INTEGER');
+    await col('routers', 'active_users',      'INTEGER DEFAULT 0');
 
-    // Add UNIQUE constraint on routers.token if it doesn't exist
+    // Add UNIQUE on routers.token if not already present
     try {
       await client.query(`
         DO $$ BEGIN
@@ -362,37 +363,63 @@ async function initDb() {
           END IF;
         END $$;
       `);
-    } catch (e) { /* ignore if already exists */ }
+    } catch (e) { /* already exists */ }
 
-    // customers table migrations
-    await addColumnIfNotExists('customers', 'username', 'TEXT');
-    await addColumnIfNotExists('customers', 'full_name', 'TEXT');
-    await addColumnIfNotExists('customers', 'email', 'TEXT');
-    await addColumnIfNotExists('customers', 'notes', 'TEXT');
-    await addColumnIfNotExists('customers', 'status', "TEXT DEFAULT 'active'");
-    await addColumnIfNotExists('customers', 'mac_address', 'TEXT');
+    // customers
+    await col('customers', 'username',   'TEXT');
+    await col('customers', 'full_name',  'TEXT');
+    await col('customers', 'email',      'TEXT');
+    await col('customers', 'notes',      'TEXT');
+    await col('customers', 'status',     "TEXT DEFAULT 'active'");
+    await col('customers', 'mac_address','TEXT');
 
-    // payments table migrations
-    await addColumnIfNotExists('payments', 'device_mac', 'TEXT');
-    await addColumnIfNotExists('payments', 'router_id', 'INTEGER');
-    await addColumnIfNotExists('payments', 'merchant_request_id', 'TEXT');
-    await addColumnIfNotExists('payments', 'result_code', 'INTEGER');
-    await addColumnIfNotExists('payments', 'result_description', 'TEXT');
-    await addColumnIfNotExists('payments', 'paid_at', 'TIMESTAMP');
-    await addColumnIfNotExists('payments', 'activation_error', 'TEXT');
-    await addColumnIfNotExists('payments', 'customer_id', 'INTEGER');
-    await addColumnIfNotExists('payments', 'package_id', 'INTEGER');
+    // payments
+    await col('payments', 'device_mac',           'TEXT');
+    await col('payments', 'router_id',            'INTEGER');
+    await col('payments', 'merchant_request_id',  'TEXT');
+    await col('payments', 'result_code',          'INTEGER');
+    await col('payments', 'result_description',   'TEXT');
+    await col('payments', 'paid_at',              'TIMESTAMP');
+    await col('payments', 'activation_error',     'TEXT');
+    await col('payments', 'customer_id',          'INTEGER');
+    await col('payments', 'package_id',           'INTEGER');
+    await col('payments', 'checkout_request_id',  'TEXT');
+    await col('payments', 'mpesa_receipt',        'TEXT');
+    await col('payments', 'status',               "TEXT DEFAULT 'pending'");
 
-    // ── SEED DEFAULT DATA ──────────────────────────────────────────────────────
+    // sessions
+    await col('sessions', 'device_id',         'INTEGER');
+    await col('sessions', 'package_id',        'INTEGER');
+    await col('sessions', 'payment_id',        'INTEGER');
+    await col('sessions', 'ip_address',        'TEXT');
+    await col('sessions', 'mac_address',       'TEXT');
+    await col('sessions', 'hotspot_username',  'TEXT');
+    await col('sessions', 'start_time',        'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await col('sessions', 'disconnect_time',   'TIMESTAMP');
+    await col('sessions', 'bytes_in',          'BIGINT DEFAULT 0');
+    await col('sessions', 'bytes_out',         'BIGINT DEFAULT 0');
+
+    // notifications
+    await col('notifications', 'admin_id', 'INTEGER');
+    await col('notifications', 'read',     'BOOLEAN DEFAULT FALSE');
+    await col('notifications', 'metadata', 'JSONB');
+
+    // audit_logs
+    await col('audit_logs', 'resource_type', 'TEXT');
+    await col('audit_logs', 'resource_id',   'INTEGER');
+    await col('audit_logs', 'ip_address',    'TEXT');
+    await col('audit_logs', 'metadata',      'JSONB');
+
+    // ── SEED DEFAULT DATA ──────────────────────────────────────────────────
 
     const defaultSettings = [
-      ['brand_name', 'EMMATECH', 'Company brand name'],
-      ['support_phone', '0768926965', 'Customer support phone'],
-      ['support_email', '', 'Customer support email'],
-      ['mpesa_env', process.env.MPESA_ENV || 'production', 'M-Pesa environment'],
-      ['session_cleanup_interval', '60', 'Session monitor interval (seconds)'],
-      ['max_retry_attempts', '3', 'Max payment retry attempts'],
-      ['voucher_prefix', 'EM', 'Voucher code prefix']
+      ['brand_name',               'EMMATECH',    'Company brand name'],
+      ['support_phone',            '0768926965',  'Customer support phone'],
+      ['support_email',            '',            'Customer support email'],
+      ['mpesa_env',                process.env.MPESA_ENV || 'production', 'M-Pesa environment'],
+      ['session_cleanup_interval', '60',          'Session monitor interval (seconds)'],
+      ['max_retry_attempts',       '3',           'Max payment retry attempts'],
+      ['voucher_prefix',           'EM',          'Voucher code prefix']
     ];
     for (const [key, value, description] of defaultSettings) {
       await client.query(
@@ -431,16 +458,16 @@ async function initDb() {
     if (pkgExists.rows.length === 0) {
       await client.query(`
         INSERT INTO packages (name, description, price, duration, download_speed, upload_speed, device_limit, display_order) VALUES
-        ('1 Hour',  'Unlimited Access',  10,  '1h',  5, 3, 1, 1),
-        ('3 Hours', 'Unlimited Access',  20,  '3h',  5, 3, 1, 2),
-        ('24 Hours','Unlimited Access',  35,  '24h', 5, 3, 1, 3),
-        ('3 Days',  'Unlimited Access', 100,  '3d',  8, 5, 2, 4),
-        ('1 Week',  'Unlimited Access', 200,  '7d',  8, 5, 2, 5),
-        ('1 Month', 'Unlimited Access', 500, '30d', 10, 5, 3, 6)
+        ('1 Hour',   'Unlimited Access',  10,  '1h',  5, 3, 1, 1),
+        ('3 Hours',  'Unlimited Access',  20,  '3h',  5, 3, 1, 2),
+        ('24 Hours', 'Unlimited Access',  35,  '24h', 5, 3, 1, 3),
+        ('3 Days',   'Unlimited Access', 100,  '3d',  8, 5, 2, 4),
+        ('1 Week',   'Unlimited Access', 200,  '7d',  8, 5, 2, 5),
+        ('1 Month',  'Unlimited Access', 500, '30d', 10, 5, 3, 6)
       `);
     }
 
-    logger.info('Database schema initialized successfully');
+    logger.info('Database schema initialized and migrated successfully');
   } catch (err) {
     logger.error('DB schema init failed', { error: err.message });
     throw err;
