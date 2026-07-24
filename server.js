@@ -28,8 +28,41 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS routers (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    ip_address TEXT,
+    api_username TEXT,
+    api_password TEXT,
+    status TEXT DEFAULT 'offline',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
-  console.log("Packages table ready.");
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    phone TEXT NOT NULL,
+    mac_address TEXT,
+    username TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    phone TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    mpesa_receipt TEXT,
+    package_id INTEGER,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+  console.log("Database tables ready.");
 }
 
 createTables();
