@@ -97,8 +97,8 @@ app.post("/stkpush", async(req,res)=>{
 
 
  // PAYBILL
- TransactionType:"CustomerPayBillOnline",
-
+ 
+TransactionType: "CustomerBuyGoodsOnline",
 
  Amount:amount,
 
