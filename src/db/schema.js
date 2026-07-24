@@ -5,7 +5,9 @@ const logger = require("../utils/logger");
 async function initDb() {
   const client = await pool.connect();
   try {
-    // Core tables
+
+    // ── CORE TABLES ────────────────────────────────────────────────────────────
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS admins (
         id SERIAL PRIMARY KEY,
@@ -299,7 +301,90 @@ async function initDb() {
       )
     `);
 
-    // Seed default settings
+    // ── SAFE COLUMN MIGRATIONS (ADD IF NOT EXISTS) ─────────────────────────────
+    // These run on every startup and safely add new columns to existing tables.
+    // Never drops data. Safe to run repeatedly.
+
+    const addColumnIfNotExists = async (table, column, definition) => {
+      try {
+        await client.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
+      } catch (e) {
+        // Older PostgreSQL versions don't support IF NOT EXISTS on ALTER COLUMN
+        // Fall back to checking pg_columns
+        const exists = await client.query(
+          `SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`,
+          [table, column]
+        );
+        if (!exists.rows.length) {
+          await client.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+        }
+      }
+    };
+
+    // packages table migrations
+    await addColumnIfNotExists('packages', 'description', 'TEXT');
+    await addColumnIfNotExists('packages', 'download_speed', 'INTEGER DEFAULT 5');
+    await addColumnIfNotExists('packages', 'upload_speed', 'INTEGER DEFAULT 5');
+    await addColumnIfNotExists('packages', 'burst_speed', 'INTEGER');
+    await addColumnIfNotExists('packages', 'priority', 'INTEGER DEFAULT 8');
+    await addColumnIfNotExists('packages', 'data_cap_mb', 'INTEGER');
+    await addColumnIfNotExists('packages', 'unlimited', 'BOOLEAN DEFAULT TRUE');
+    await addColumnIfNotExists('packages', 'device_limit', 'INTEGER DEFAULT 1');
+    await addColumnIfNotExists('packages', 'bandwidth_profile_id', 'INTEGER');
+    await addColumnIfNotExists('packages', 'active', 'BOOLEAN DEFAULT TRUE');
+    await addColumnIfNotExists('packages', 'display_order', 'INTEGER DEFAULT 0');
+
+    // routers table migrations
+    await addColumnIfNotExists('routers', 'location', 'TEXT');
+    await addColumnIfNotExists('routers', 'api_port', 'INTEGER DEFAULT 8728');
+    await addColumnIfNotExists('routers', 'api_username', 'TEXT');
+    await addColumnIfNotExists('routers', 'api_password', 'TEXT');
+    await addColumnIfNotExists('routers', 'hotspot_name', "TEXT DEFAULT 'hotspot'");
+    await addColumnIfNotExists('routers', 'routeros_version', 'TEXT');
+    await addColumnIfNotExists('routers', 'model', 'TEXT');
+    await addColumnIfNotExists('routers', 'serial_number', 'TEXT');
+    await addColumnIfNotExists('routers', 'mac_address', 'TEXT');
+    await addColumnIfNotExists('routers', 'token', 'TEXT');
+    await addColumnIfNotExists('routers', 'firmware', 'TEXT');
+    await addColumnIfNotExists('routers', 'uptime', 'TEXT');
+    await addColumnIfNotExists('routers', 'cpu_load', 'INTEGER');
+    await addColumnIfNotExists('routers', 'free_memory', 'INTEGER');
+    await addColumnIfNotExists('routers', 'active_users', 'INTEGER DEFAULT 0');
+
+    // Add UNIQUE constraint on routers.token if it doesn't exist
+    try {
+      await client.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'routers_token_key'
+          ) THEN
+            ALTER TABLE routers ADD CONSTRAINT routers_token_key UNIQUE (token);
+          END IF;
+        END $$;
+      `);
+    } catch (e) { /* ignore if already exists */ }
+
+    // customers table migrations
+    await addColumnIfNotExists('customers', 'username', 'TEXT');
+    await addColumnIfNotExists('customers', 'full_name', 'TEXT');
+    await addColumnIfNotExists('customers', 'email', 'TEXT');
+    await addColumnIfNotExists('customers', 'notes', 'TEXT');
+    await addColumnIfNotExists('customers', 'status', "TEXT DEFAULT 'active'");
+    await addColumnIfNotExists('customers', 'mac_address', 'TEXT');
+
+    // payments table migrations
+    await addColumnIfNotExists('payments', 'device_mac', 'TEXT');
+    await addColumnIfNotExists('payments', 'router_id', 'INTEGER');
+    await addColumnIfNotExists('payments', 'merchant_request_id', 'TEXT');
+    await addColumnIfNotExists('payments', 'result_code', 'INTEGER');
+    await addColumnIfNotExists('payments', 'result_description', 'TEXT');
+    await addColumnIfNotExists('payments', 'paid_at', 'TIMESTAMP');
+    await addColumnIfNotExists('payments', 'activation_error', 'TEXT');
+    await addColumnIfNotExists('payments', 'customer_id', 'INTEGER');
+    await addColumnIfNotExists('payments', 'package_id', 'INTEGER');
+
+    // ── SEED DEFAULT DATA ──────────────────────────────────────────────────────
+
     const defaultSettings = [
       ['brand_name', 'EMMATECH', 'Company brand name'],
       ['support_phone', '0768926965', 'Customer support phone'],
@@ -316,7 +401,6 @@ async function initDb() {
       );
     }
 
-    // Default organization
     const orgExists = await client.query('SELECT id FROM organizations LIMIT 1');
     if (orgExists.rows.length === 0) {
       await client.query(
@@ -325,7 +409,6 @@ async function initDb() {
       );
     }
 
-    // Default admin account
     const adminExists = await client.query('SELECT id FROM admins WHERE username = $1', ['admin']);
     if (adminExists.rows.length === 0) {
       const hash = await bcrypt.hash('Admin@1234', 12);
@@ -336,7 +419,6 @@ async function initDb() {
       logger.info('Default admin created. Username: admin | Password: Admin@1234 — CHANGE THIS IMMEDIATELY!');
     }
 
-    // Default bandwidth profiles
     const bwExists = await client.query('SELECT id FROM bandwidth_profiles LIMIT 1');
     if (bwExists.rows.length === 0) {
       await client.query(`
@@ -345,21 +427,20 @@ async function initDb() {
       `);
     }
 
-    // Default packages if none exist
     const pkgExists = await client.query('SELECT id FROM packages LIMIT 1');
     if (pkgExists.rows.length === 0) {
       await client.query(`
         INSERT INTO packages (name, description, price, duration, download_speed, upload_speed, device_limit, display_order) VALUES
-        ('1 Hour', 'Unlimited Access', 10, '1h', 5, 3, 1, 1),
-        ('3 Hours', 'Unlimited Access', 20, '3h', 5, 3, 1, 2),
-        ('24 Hours', 'Unlimited Access', 35, '24h', 5, 3, 1, 3),
-        ('3 Days', 'Unlimited Access', 100, '3d', 8, 5, 2, 4),
-        ('1 Week', 'Unlimited Access', 200, '7d', 8, 5, 2, 5),
+        ('1 Hour',  'Unlimited Access',  10,  '1h',  5, 3, 1, 1),
+        ('3 Hours', 'Unlimited Access',  20,  '3h',  5, 3, 1, 2),
+        ('24 Hours','Unlimited Access',  35,  '24h', 5, 3, 1, 3),
+        ('3 Days',  'Unlimited Access', 100,  '3d',  8, 5, 2, 4),
+        ('1 Week',  'Unlimited Access', 200,  '7d',  8, 5, 2, 5),
         ('1 Month', 'Unlimited Access', 500, '30d', 10, 5, 3, 6)
       `);
     }
 
-    logger.info('Database schema initialized successfully (20 tables)');
+    logger.info('Database schema initialized successfully');
   } catch (err) {
     logger.error('DB schema init failed', { error: err.message });
     throw err;
