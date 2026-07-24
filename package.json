@@ -18,9 +18,11 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
-    "node-routeros": "^1.4.8",
     "pg": "^8.13.0",
     "uuid": "^11.1.0",
     "winston": "^3.17.0"
+  },
+  "optionalDependencies": {
+    "node-routeros": "^1.4.8"
   }
 }
