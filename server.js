@@ -1,86 +1,195 @@
 require("dotenv").config();
+
+const express = require("express");
 const axios = require("axios");
 const moment = require("moment");
 
-const MPESA_ENV = process.env.MPESA_ENV || "sandbox"; // "sandbox" or "production"
-const MPESA_BASE_URL = MPESA_ENV === "production" ? "https://production.safaricom.co.ke" : "https://api.safaricom.co.ke";
+const app = express();
 
-// ✅ Ensure required env variables are set
-const REQUIRED_ENV_VARS = [
-    "MPESA_CONSUMER_KEY",
-    "MPESA_CONSUMER_SECRET",
-    "MPESA_SHORTCODE",
-    "MPESA_PASSKEY",
-    "MPESA_CALLBACK_URL"
-];
+app.use(express.json());
 
-for (const varName of REQUIRED_ENV_VARS) {
-    if (!process.env[varName]) {
-        console.error(`❌ Missing environment variable: ${varName}`);
-        process.exit(1); // Stop the server if important variables are missing
+const PORT = process.env.PORT || 3000;
+
+const MPESA_BASE_URL =
+  process.env.MPESA_ENV === "sandbox"
+    ? "https://sandbox.safaricom.co.ke"
+    : "https://api.safaricom.co.ke";
+
+
+// Test
+app.get("/", (req, res) => {
+  res.send("✅ Daraja WiFi Payment Server Running");
+});
+
+
+// Get token
+async function getAccessToken() {
+
+  const auth = Buffer.from(
+    `${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`
+  ).toString("base64");
+
+
+  const response = await axios.get(
+    `${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+    {
+      headers:{
+        Authorization:`Basic ${auth}`
+      }
     }
+  );
+
+
+  return response.data.access_token;
 }
 
-// ✅ Get access token
-const getAccessToken = async () => {
-    const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString("base64");
 
-    try {
-        const response = await axios.get(`${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
-            headers: { Authorization: `Basic ${auth}` }
-        });
-        console.log("✅ MPesa Access Token Obtained Successfully");
-        return response.data.access_token;
-    } catch (error) {
-        console.error("❌ MPesa Auth Error:", error.response ? error.response.data : error.message);
-        return null;
-    }
-};
+// Token test
+app.get("/token", async(req,res)=>{
 
-// ✅ STK Push
-const stkPush = async (phone, amount, transactionId) => {
-    console.log(`📩 STK Push Request: Phone: ${phone}, Amount: ${amount}, TransactionID: ${transactionId}`);
+ try{
 
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-        console.error("❌ Failed to get MPesa access token. STK Push aborted.");
-        return null;
-    }
+  const token = await getAccessToken();
 
-    const timestamp = moment().format("YYYYMMDDHHmmss");
-    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
+  res.json({
+    access_token: token
+  });
 
-    const payload = {
-        BusinessShortCode: process.env.MPESA_SHORTCODE,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: "CustomerPayBillOnline",
-        Amount: amount,
-        PartyA: phone,
-        PartyB: process.env.MPESA_SHORTCODE,
-        PhoneNumber: phone,
-        CallBackURL: process.env.MPESA_CALLBACK_URL,
-        AccountReference: "WiFi Payment",
-        TransactionDesc: `WiFi Payment - ${transactionId}`
-    };
+ }catch(error){
 
-    try {
-        console.log("📤 Sending STK Push...");
-        const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
+  res.status(500).json(
+    error.response?.data || error.message
+  );
 
-        if (response.data.ResponseCode === "0") {
-            console.log("✅ STK Push Successful:", response.data);
-            return response.data;
-        } else {
-            console.error("❌ STK Push Failed:", response.data);
-            return null;
-        }
-    } catch (error) {
-        console.error("❌ MPesa STK Push Error:", error.response ? error.response.data : error.message);
-        return null;
-    }
-};
+ }
 
-module.exports = { stkPush };
+});
+
+
+// STK Push
+app.post("/stkpush", async(req,res)=>{
+
+ try{
+
+ const phone = req.body.phone || "254113745960";
+ const amount = req.body.amount || 1;
+
+
+ const token = await getAccessToken();
+
+
+ const timestamp = moment()
+ .format("YYYYMMDDHHmmss");
+
+
+ const password = Buffer.from(
+ `${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`
+ )
+ .toString("base64");
+
+
+ const payload={
+
+ BusinessShortCode:process.env.MPESA_SHORTCODE,
+
+ Password:password,
+
+ Timestamp:timestamp,
+
+
+ // PAYBILL
+ TransactionType:"CustomerPayBillOnline",
+
+
+ Amount:amount,
+
+ PartyA:phone,
+
+ PartyB:process.env.MPESA_SHORTCODE,
+
+ PhoneNumber:phone,
+
+
+ CallBackURL:process.env.MPESA_CALLBACK_URL,
+
+
+ AccountReference:"WiFi Payment",
+
+ TransactionDesc:"WiFi Package Payment"
+
+ };
+
+
+ console.log("Sending STK:",payload);
+
+
+ const response = await axios.post(
+
+ `${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`,
+
+ payload,
+
+ {
+ headers:{
+ Authorization:`Bearer ${token}`
+ }
+ }
+
+ );
+
+
+ res.json(response.data);
+
+
+
+ }catch(error){
+
+ console.log(
+ error.response?.data || error.message
+ );
+
+
+ res.status(500).json(
+ error.response?.data || error.message
+ );
+
+ }
+
+});
+
+
+
+// Callback
+app.post("/callback",(req,res)=>{
+
+
+console.log(
+"MPESA CALLBACK:"
+);
+
+
+console.log(
+JSON.stringify(req.body,null,2)
+);
+
+
+res.json({
+
+ResultCode:0,
+
+ResultDesc:"Accepted"
+
+});
+
+
+});
+
+
+
+app.listen(PORT,()=>{
+
+console.log(
+`Server running on port ${PORT}`
+);
+
+});
