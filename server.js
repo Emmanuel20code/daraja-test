@@ -184,10 +184,42 @@ app.post("/stkpush", async(req,res)=>{
 
  try{
 
- const phone = req.body.phone || "254113745960";
- const amount = req.body.amount || 1;
+ const { phone, packageId } = req.body;
 
+const packageResult = await pool.query(
+  "SELECT * FROM packages WHERE id = $1",
+  [packageId]
+);
 
+if (packageResult.rows.length === 0) {
+  return res.status(404).json({
+    error: "Package not found"
+  });
+}
+
+const selectedPackage = packageResult.rows[0];
+const amount = selectedPackage.price;
+const payment = await pool.query(
+  `INSERT INTO payments
+   (phone, amount, package_id, status)
+   VALUES ($1, $2, $3, 'pending')
+   RETURNING id`,
+  [phone, amount, packageId]
+);
+
+const paymentId = payment.rows[0].id;
+   
+await pool.query(
+  `UPDATE payments
+   SET merchant_request_id = $1,
+       checkout_request_id = $2
+   WHERE id = $3`,
+  [
+    response.data.MerchantRequestID,
+    response.data.CheckoutRequestID,
+    paymentId
+  ]
+);
  const token = await getAccessToken();
 
 
