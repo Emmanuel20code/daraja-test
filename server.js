@@ -18,6 +18,22 @@ pool.connect()
   .then(() => console.log("Database connected successfully."))
   .catch((err) => console.error("Database connection failed:", err));
 
+async function createTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS packages (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      price INTEGER NOT NULL,
+      duration TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  console.log("Packages table ready.");
+}
+
+createTables();
+
 app.use(express.json());
 app.use(express.static("public"));
 
